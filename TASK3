@@ -1,0 +1,95 @@
+# Import necessary libraries
+import numpy as np
+import matplotlib.pyplot as plt
+import tensorflow as tf
+from tensorflow import keras
+from tensorflow.keras import layers
+from tensorflow.keras.datasets import cifar10
+from sklearn.metrics import classification_report, confusion_matrix
+import seaborn as sns
+
+# Load the CIFAR-10 dataset (10 classes, 60,000 images)
+(X_train, y_train), (X_test, y_test) = cifar10.load_data()
+
+# Normalize the pixel values to range [0, 1]
+X_train, X_test = X_train / 255.0, X_test / 255.0
+
+# Define class names
+class_names = ['Airplane', 'Automobile', 'Bird', 'Cat', 'Deer', 
+               'Dog', 'Frog', 'Horse', 'Ship', 'Truck']
+
+# Display some sample images
+fig, axes = plt.subplots(1, 5, figsize=(10, 5))
+for i in range(5):
+    axes[i].imshow(X_train[i])
+    axes[i].set_title(class_names[y_train[i][0]])
+    axes[i].axis('off')
+plt.show()
+
+# Build a CNN model
+model = keras.Sequential([
+    layers.Conv2D(32, (3,3), activation='relu', input_shape=(32, 32, 3)),
+    layers.MaxPooling2D(2,2),
+    layers.Conv2D(64, (3,3), activation='relu'),
+    layers.MaxPooling2D(2,2),
+    layers.Conv2D(128, (3,3), activation='relu'),
+    layers.MaxPooling2D(2,2),
+    layers.Flatten(),
+    layers.Dense(128, activation='relu'),
+    layers.Dense(10, activation='softmax')  # 10 output classes
+])
+
+# Compile the model
+model.compile(optimizer='adam', loss='sparse_categorical_crossentropy', metrics=['accuracy'])
+
+# Train the model
+history = model.fit(X_train, y_train, epochs=10, validation_data=(X_test, y_test), batch_size=64)
+
+# Evaluate the model on test data
+test_loss, test_acc = model.evaluate(X_test, y_test)
+print(f"\nTest Accuracy: {test_acc:.2f}")
+
+# Plot accuracy and loss curves
+plt.figure(figsize=(12,5))
+
+# Accuracy Plot
+plt.subplot(1,2,1)
+plt.plot(history.history['accuracy'], label='Train Accuracy')
+plt.plot(history.history['val_accuracy'], label='Test Accuracy')
+plt.legend()
+plt.xlabel('Epochs')
+plt.ylabel('Accuracy')
+plt.title('Accuracy Curve')
+
+# Loss Plot
+plt.subplot(1,2,2)
+plt.plot(history.history['loss'], label='Train Loss')
+plt.plot(history.history['val_loss'], label='Test Loss')
+plt.legend()
+plt.xlabel('Epochs')
+plt.ylabel('Loss')
+plt.title('Loss Curve')
+
+plt.show()
+
+# Confusion matrix
+y_pred = np.argmax(model.predict(X_test), axis=1)
+conf_matrix = confusion_matrix(y_test, y_pred)
+
+plt.figure(figsize=(8,6))
+sns.heatmap(conf_matrix, annot=True, fmt="d", cmap="Blues", xticklabels=class_names, yticklabels=class_names)
+plt.xlabel('Predicted')
+plt.ylabel('Actual')
+plt.title('Confusion Matrix')
+plt.show()
+
+# Test with a new image from test set
+index = np.random.randint(0, len(X_test))
+test_img = X_test[index]
+plt.imshow(test_img)
+plt.axis('off')
+plt.title("Actual: " + class_names[y_test[index][0]])
+
+# Predict class
+predicted_class = np.argmax(model.predict(np.expand_dims(test_img, axis=0)))
+print(f"Predicted: {class_names[predicted_class]}")
